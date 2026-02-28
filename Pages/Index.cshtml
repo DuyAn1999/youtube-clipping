@@ -6,5 +6,147 @@
 
 <div class="text-center">
     <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    <div class="mb-3">
+        <label for="clip-url" class="form-label">Video URL</label>
+        <input type="text" id="clip-url" name="clip-url" class="form-control" placeholder="https://www.youtube.com/watch?v=..." />
+    </div>
+    <button id="load-video" class="btn btn-primary">Load Video</button>
+
+    <div class="mt-4">
+        <div id="player"></div>
+    </div>
+    <div class="time-display">
+        <div>Start: <span id="startLabel">0</span>s</div>
+        <div>End: <span id="endLabel">0</span>s</div>
+    </div>
+
+    <label>Clip Start</label>
+    <input type="range" id="startRange" min="0" max="100" value="0" step="1">
+
+    <label>Clip End</label>
+    <input type="range" id="endRange" min="0" max="100" value="10" step="1">
+    <script>
+        (function() {
+            var lastTimeline = null;
+            window.addEventListener('timelineChange', function(e){ lastTimeline = e.detail; });
+
+            function parseVideoId(url){
+                if (!url) return null;
+                try{
+                    if (url.includes('youtu.be/')) return url.split('youtu.be/')[1].split(/[?&]/)[0];
+                    var m = url.match(/[?&]v=([^&]+)/);
+                    if (m && m[1]) return m[1];
+                    var em = url.match(/embed\/([^?&]+)/);
+                    if (em && em[1]) return em[1];
+                    return null;
+                }catch(e){return null;}
+            }
+
+            let player;
+            let duration = 0;
+            let clipStart = 0;
+            let clipEnd = 10;
+            let interval;
+
+            function onYouTubeIframeAPIReady() {
+              player = new YT.Player('player', {
+                height: '390',
+                width: '640',
+                videoId: 'M7lc1UVf-VE', // change to any video
+                playerVars: {
+                  controls: 1,
+                  modestbranding: 1
+                },
+                events: {
+                  onReady: onPlayerReady
+                }
+              });
+            }
+
+            function onPlayerReady() {
+              duration = Math.floor(player.getDuration());
+
+              document.getElementById("startRange").max = duration;
+              document.getElementById("endRange").max = duration;
+
+              document.getElementById("endRange").value = Math.min(10, duration);
+              clipEnd = Math.min(10, duration);
+
+              updateLabels();
+            }
+
+            const startSlider = document.getElementById("startRange");
+            const endSlider = document.getElementById("endRange");
+
+            startSlider.addEventListener("input", () => {
+              clipStart = parseInt(startSlider.value);
+
+              if (clipStart >= clipEnd) {
+                clipStart = clipEnd - 1;
+                startSlider.value = clipStart;
+              }
+
+              updateLabels();
+            });
+
+            endSlider.addEventListener("input", () => {
+              clipEnd = parseInt(endSlider.value);
+
+              if (clipEnd <= clipStart) {
+                clipEnd = clipStart + 1;
+                endSlider.value = clipEnd;
+              }
+
+              updateLabels();
+            });
+
+            function updateLabels() {
+              document.getElementById("startLabel").innerText = clipStart;
+              document.getElementById("endLabel").innerText = clipEnd;
+            }
+
+            function playClip() {
+              player.seekTo(clipStart, true);
+              player.playVideo();
+
+              clearInterval(interval);
+              interval = setInterval(() => {
+                const current = player.getCurrentTime();
+                if (current >= clipEnd) {
+                  player.pauseVideo();
+                  clearInterval(interval);
+                }
+              }, 200);
+            }
+
+            function pauseClip() {
+              player.pauseVideo();
+              clearInterval(interval);
+            }
+
+            // Called by YouTube API when ready
+            window.onYouTubeIframeAPIReady = function(){ /* API ready */ };
+
+            function createOrLoadPlayer(videoId, start) {
+                player = new YT.Player('player', 
+                {
+                    height: '405', 
+                    width: '720', 
+                    videoId: videoId,
+                    playerVars: { playsinline: 1 },
+                    events: {
+                            'onReady': onPlayerReady
+                    }
+                });
+            }
+
+            document.getElementById('load-video').addEventListener('click', function(){
+                var input = document.getElementById('clip-url').value.trim();
+                var id = parseVideoId(input);
+                var start = lastTimeline && typeof lastTimeline.start === 'number' ? lastTimeline.start : 0;
+                if (!id) { alert('Could not parse YouTube video id'); return; }
+                createOrLoadPlayer(id, start);
+            });
+        })();
+    </script>
 </div>
