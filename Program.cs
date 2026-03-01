@@ -2,6 +2,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddControllers();
+// Register clipping service
+builder.Services.AddSingleton<YoutubeClipping.Services.IClipService, YoutubeClipping.Services.ClipService>();
 
 var app = builder.Build();
 
@@ -18,6 +21,8 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseAuthorization();
+
+app.MapControllers();
 
 app.MapStaticAssets();
 app.MapRazorPages()

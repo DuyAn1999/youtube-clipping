@@ -1,0 +1,35 @@
+@page "/clip/{id}"
+@model ClipModel
+@{
+    ViewData["Title"] = "YouTube Clip";
+}
+
+<div class="text-center">
+    <h1 class="display-4">YouTube Clip</h1>
+
+    @if (Model.Clip != null)
+    {
+        <div class="mt-4">
+            <div style="max-width:720px;margin:0 auto;">
+                <iframe id="clip-frame" width="720" height="405" src="@Model.EmbedUrl" frameborder="0" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <p><strong>Video ID:</strong> @Model.Clip.VideoId</p>
+            <p><strong>Start:</strong> @Model.Clip.StartSeconds.ToString("F1") seconds</p>
+            <p><strong>End:</strong> @Model.Clip.EndSeconds.ToString("F1") seconds</p>
+            <p><strong>Duration:</strong> @((Model.Clip.EndSeconds - Model.Clip.StartSeconds).ToString("F1")) seconds</p>
+            <p><strong>Created:</strong> @Model.Clip.CreatedUtc:yyyy-MM-dd HH:mm:ss UTC</p>
+        </div>
+
+        <div class="mt-4">
+            <a href="/" class="btn btn-primary">← Back to Home</a>
+        </div>
+    }
+    else
+    {
+        <p class="text-danger">Clip not found.</p>
+        <a href="/" class="btn btn-primary">← Back to Home</a>
+    }
+</div>

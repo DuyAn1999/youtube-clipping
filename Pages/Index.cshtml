@@ -25,9 +25,28 @@
 
     <label>Clip End</label>
     <input type="range" id="endRange" min="0" max="100" value="10" step="1">
+
+    <div class="mt-4">
+        <button id="share-clip-btn" class="btn btn-success">Share Clip</button>
+    </div>
+
+    <div class="mt-3" id="share-result" style="display:none;">
+        <div class="alert alert-success">
+            <strong>Clip Shared Successfully!</strong>
+            <div class="mt-2">
+                <label>Share URL:</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="text" id="share-url-output" class="form-control" readonly style="flex:1;" />
+                    <button id="copy-url-btn" class="btn btn-sm btn-outline-secondary">Copy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         (function() {
             var lastTimeline = null;
+            var currentVideoId = null;
             window.addEventListener('timelineChange', function(e){ lastTimeline = e.detail; });
 
             function parseVideoId(url){
@@ -47,21 +66,6 @@
             let clipStart = 0;
             let clipEnd = 10;
             let interval;
-
-            function onYouTubeIframeAPIReady() {
-              player = new YT.Player('player', {
-                height: '390',
-                width: '640',
-                videoId: 'M7lc1UVf-VE', // change to any video
-                playerVars: {
-                  controls: 1,
-                  modestbranding: 1
-                },
-                events: {
-                  onReady: onPlayerReady
-                }
-              });
-            }
 
             function onPlayerReady() {
               duration = Math.floor(player.getDuration());
@@ -124,7 +128,6 @@
               clearInterval(interval);
             }
 
-            // Called by YouTube API when ready
             window.onYouTubeIframeAPIReady = function(){ /* API ready */ };
 
             function createOrLoadPlayer(videoId, start) {
@@ -145,7 +148,47 @@
                 var id = parseVideoId(input);
                 var start = lastTimeline && typeof lastTimeline.start === 'number' ? lastTimeline.start : 0;
                 if (!id) { alert('Could not parse YouTube video id'); return; }
+                currentVideoId = id;
                 createOrLoadPlayer(id, start);
+            });
+
+            // Share Clip button handler
+            document.getElementById('share-clip-btn').addEventListener('click', function(){
+                if (!currentVideoId) { alert('Please load a video first'); return; }
+                if (clipEnd <= clipStart) { alert('Invalid clip times'); return; }
+
+                // Call API to store clip
+                fetch('/api/clip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ videoId: currentVideoId, start: clipStart, end: clipEnd })
+                }).then(r => {
+                    if (!r.ok) throw new Error('Failed to share clip');
+                    return r.json();
+                }).then(j => {
+                    if (j && j.shareUrl) {
+                        // Get absolute URL
+                        var absUrl = window.location.origin + j.shareUrl;
+                        document.getElementById('share-url-output').value = absUrl;
+                        document.getElementById('share-result').style.display = '';
+                    }
+                }).catch(e => {
+                    alert('Error: ' + e.message);
+                });
+            });
+
+            // Copy URL button
+            document.getElementById('copy-url-btn').addEventListener('click', function(){
+                var url = document.getElementById('share-url-output');
+                url.select();
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(url.value).then(() => {
+                        var btn = this;
+                        var originalText = btn.textContent;
+                        btn.textContent = 'Copied!';
+                        setTimeout(() => { btn.textContent = originalText; }, 2000);
+                    }).catch(() => { alert('Failed to copy'); });
+                }
             });
         })();
     </script>
